@@ -1,0 +1,31 @@
+# 🚀 Ignorar archivos y carpetas innecesarias en Unreal Engine 5
+
+# 🚫 Carpetas de compilación y caché
+Engine/
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# 🚫 Ignorar configuraciones temporales de Visual Studio y Xcode
+.vs/
+*.VC.db
+*.sln
+*.xcodeproj
+*.xcworkspace
+.idea/
+.vscode/
+.DS_Store
+
+# 🚫 Ignorar logs y backups
+*.log
+*.bak
+
+# 🚫 Ignorar carpetas de Plugins si son temporales
+Plugins/*/Intermediate/
+Plugins/*/Binaries/
+
+# 🚫 Ignorar carpetas de compilación de C++
+Source/*/Intermediate/
+Source/*/Binaries/
