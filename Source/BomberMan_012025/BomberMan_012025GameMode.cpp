@@ -63,29 +63,86 @@ void ABomberMan_012025GameMode::BeginPlay()
             else if (FMath::RandRange(0, 10) < 2) {
                 valor2 = FMath::RandRange(1, 10);
                 SpawnBloque(posicionBloque, valor2);
-            }
-            */
+            }*/
+            
         }
     }
+    
 
-    if (aposicionesLibres.Num() > 0) {
-		int indiceAleatorio = FMath::RandRange(0, aposicionesLibres.Num() - 1);
-		FVector posicionAleatoria = aposicionesLibres[indiceAleatorio];
+
+    if (aposicionesLibresMadera.Num() > 0) {
+        FVector posicionMasCercana;
+        float distanciaMinima = FLT_MAX;
+        TArray<FVector> bloquesCandidatos; // Guardar bloques elegibles
+
+        // Parámetro para alternar entre centro y borde
+        bool bSpawnCercaDelCentro = true; // Cambia a 'false' para *spawnear* cerca de los bordes
+
+        if (bSpawnCercaDelCentro) {
+            // *** Lógica para aparecer cerca del centro ***
+            FVector centroMapa = FVector(
+                XInicial + (aMapaBloques[0].Num() * AnchoBloque) / 2.0f, // Coordenada X del centro
+                YInicial + (aMapaBloques.Num() * LargoBloque) / 2.0f,     // Coordenada Y del centro
+                20.0f                                                    // Coordenada Z base
+            );
+
+            float radioMaximo = 500.0f; // Ajusta el radio alrededor del centro
+
+            for (const FVector& posicion : aposicionesLibresMadera) {
+                float distanciaActual = FVector::Dist(centroMapa, posicion);
+
+                if (distanciaActual <= radioMaximo) {
+                    bloquesCandidatos.Add(posicion); // Agregar posiciones dentro del radio
+                }
+            }
+        }
+        else {
+            // *** Lógica para aparecer cerca del borde ***
+            for (const FVector& posicion : aposicionesLibresMadera) {
+                // Calcular las distancias a los bordes del mapa
+                float distanciaSuperior = FMath::Abs(posicion.Y - YInicial);
+                float distanciaInferior = FMath::Abs(posicion.Y - (YInicial + (aMapaBloques.Num() * LargoBloque)));
+                float distanciaIzquierda = FMath::Abs(posicion.X - XInicial);
+                float distanciaDerecha = FMath::Abs(posicion.X - (XInicial + (aMapaBloques[0].Num() * AnchoBloque)));
+
+                // Calcular la distancia mínima a cualquier borde
+                float distanciaActual = FMath::Min(
+                    FMath::Min(distanciaSuperior, distanciaInferior),
+                    FMath::Min(distanciaIzquierda, distanciaDerecha)
+                );
+
+                // Verificar si esta distancia es menor o igual al mínimo
+                if (distanciaActual <= distanciaMinima) {
+                    distanciaMinima = distanciaActual;
+                    bloquesCandidatos.Add(posicion); // Agregar bloques cercanos al borde
+                }
+            }
+        }
+
+        // Seleccionar un bloque aleatorio de los candidatos
+        if (bloquesCandidatos.Num() > 0) {
+            int indiceAleatorio = FMath::RandRange(0, bloquesCandidatos.Num() - 1);
+            posicionMasCercana = bloquesCandidatos[indiceAleatorio];
+        }
+
+        // Ajustar la posición para que el personaje esté encima del bloque de madera
+        posicionMasCercana.Z += 400.0f;
 
         // Obtener al personaje
-		APawn* personaje = UGameplayStatics::GetPlayerPawn(this, 0);
+        APawn* personaje = UGameplayStatics::GetPlayerPawn(this, 0);
         if (personaje) {
-			// Teletransportar al personaje a la posición aleatoria
-			personaje->SetActorLocation(posicionAleatoria);
+            // Teletransportar al personaje a la posición calculada
+            personaje->SetActorLocation(posicionMasCercana);
         }
     }
 
     AsignarMovimientosAleatorios();
 
     // Iniciar el timer para desaparecer los bloques
-    GetWorldTimerManager().SetTimer(MaderaTimerHandle, this, &ABomberMan_012025GameMode::DesaparecerBloquesMadera, 5.0f, true, 10.0f);
+    //GetWorldTimerManager().SetTimer(MaderaTimerHandle, this, &ABomberMan_012025GameMode::DesaparecerBloquesMadera, 5.0f, true, 10.0f);
 
 }
+
 
 // Funcion para generar un bloque
 void ABomberMan_012025GameMode::SpawnBloque(FVector posicionBloque, int32 tipoBloque)
@@ -132,12 +189,14 @@ void ABomberMan_012025GameMode::SpawnBloque(FVector posicionBloque, int32 tipoBl
     else if (tipoBloque == 1)
     {
         BloqueGenerado = GetWorld()->SpawnActor<ABloqueMadera>(ABloqueMadera::StaticClass(), posicionBloque, FRotator(0.0f, 0.0f, 0.0f));
+
+        //Almacenar posiciones libres
+        aposicionesLibresMadera.Add(posicionBloque);
     }
     else if (tipoBloque == 0)
     {
 
-        //Almacenar posiciones libres
-		aposicionesLibres.Add(posicionBloque); 
+      
 
         float probabilidad = FMath::RandRange(0.0f, 1.0f);
         if (probabilidad < 0.1f) // 10% de probabilidad de spawnear
@@ -218,10 +277,10 @@ void ABomberMan_012025GameMode::AsignarMovimientosAleatorios()
     }
     */
 
-    // Función para asignar movimiento a 2 bloques aleatorios de un tipo
+    // Función para asignar movimiento a 4 bloques aleatorios de un tipo
     auto AsignarMovimiento = [](TArray<ABloque*>& Lista, int Tipo, int DirX, int DirY, int DirZ, float Velocidad = 100.0f)
         {
-            if (Lista.Num() >= 2)
+            if (Lista.Num() >= 4)
             {
                 // Mezclar el array para selección aleatoria
                 for (int32 i = 0; i < Lista.Num(); i++)
@@ -233,9 +292,11 @@ void ABomberMan_012025GameMode::AsignarMovimientosAleatorios()
                     }
                 }
 
-                // Seleccionar los primeros 2 bloques después de mezclar
-                for (int32 i = 0; i < 2 && i < Lista.Num(); i++)
+                // Seleccionar los primeros 4 bloques después de mezclar
+                for (int32 i = 0; i < 4 && i < Lista.Num(); i++)
                 {
+  
+
                     ABloque* Bloque = Lista[i];
                     Bloque->TipoMovimiento = Tipo;
                     Bloque->DireccionMovimientoX = DirX;
@@ -244,20 +305,111 @@ void ABomberMan_012025GameMode::AsignarMovimientosAleatorios()
                     Bloque->FloatSpeed = Velocidad;
                     Bloque->bPuedeMoverse = true;
                 }
+
+                // Temporizador para actualizar movimientos cada 10 segundos
+                static FTimerHandle TimerHandle; // Static para persistencia entre llamados
+                if (GWorld) // Verifica que el mundo esté disponible
+                {
+                    GWorld->GetTimerManager().SetTimer(
+                        TimerHandle,
+                        FTimerDelegate::CreateLambda([=]() {
+                            for (int32 i = 0; i < 4 && i < Lista.Num(); i++)
+                            {
+                                ABloque* Bloque = Lista[i];
+                                Bloque->TipoMovimiento = FMath::RandRange(0, 2);
+                                // Elegir una dirección aleatoria única
+                                int Direccion = FMath::RandRange(0, 2); // 0 para X, 1 para Y, 2 para Z
+                                Bloque->DireccionMovimientoX = (Direccion == 0) ? FMath::RandRange(-1, 1) : 0; // Solo X si se selecciona 0
+                                Bloque->DireccionMovimientoY = (Direccion == 1) ? FMath::RandRange(-1, 1) : 0; // Solo Y si se selecciona 1
+                                Bloque->DireccionMovimientoZ = (Direccion == 2) ? FMath::RandRange(-1, 1) : 0; // Solo Z si se selecciona 2
+
+
+                                Bloque->FloatSpeed = FMath::RandRange(50.0f, 130.0f); // Actualizar velocidad
+                                Bloque->bPuedeMoverse = true;
+                            }
+                            }),
+                        10.0f, // Tiempo en segundos
+                        true // Repetir el temporizador
+                    );
+                }
+
+
             }
         };
 
+
+
     // Asignar movimientos específicos para cada tipo de bloque
-    AsignarMovimiento(Ladrillos, 0, 1, 0, 0, 80.0f);    // Ladrillo: Eje X, Velocidad 80
-    AsignarMovimiento(Maderas, 1, 0, 1, 0, 70.0f);      // Madera: Eje Y, Velocidad 70
-    AsignarMovimiento(Aceros, 2, 0, 0, 1, 50.0f);       // Acero: Eje Z, Velocidad 50
-    AsignarMovimiento(Concretos, 0, -1, 0, 0, 60.0f);   // Concreto: Eje -X, Velocidad 60
-    AsignarMovimiento(Pastos, 1, 0, -1, 0, 120.0f);     // Pasto: Eje -Y, Velocidad 120
-    AsignarMovimiento(Arenas, 2, 0, 0, -1, 130.0f);     // Arena: Eje -Z, Velocidad 130
-    AsignarMovimiento(Gravas, 0, 1, 1, 0, 75.0f);       // Grava: Diagonal X+Y, Velocidad 75
-    AsignarMovimiento(Cobres, 1, 0, 1, 1, 65.0f);       // Cobre: Diagonal Y+Z, Velocidad 65
-    AsignarMovimiento(Robles, 2, 1, 0, 1, 85.0f);       // Roble: Diagonal X+Z, Velocidad 85
-    AsignarMovimiento(Oros, 0, -1, -1, 0, 100.0f);      // Oro: Diagonal -X-Y, Velocidad 100
+    AsignarMovimiento(Ladrillos,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
+    AsignarMovimiento(Maderas,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
+    AsignarMovimiento(Aceros,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
+    AsignarMovimiento(Concretos,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
+    AsignarMovimiento(Pastos,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
+    AsignarMovimiento(Arenas,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
+    AsignarMovimiento(Gravas,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
+    AsignarMovimiento(Cobres,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
+    AsignarMovimiento(Robles,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
+    AsignarMovimiento(Oros,
+        FMath::RandRange(0, 2),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(-1, 1),
+        FMath::RandRange(50.0f, 130.0f));
+
 
 }
 
