@@ -97,7 +97,7 @@
 
         FTimerHandle MovimientoHorizontalTimer;
 
-   
+		void GenerarMapa();
 
 
         //void SpawnBloques();

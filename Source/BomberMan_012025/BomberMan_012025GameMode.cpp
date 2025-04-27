@@ -37,9 +37,10 @@ ABomberMan_012025GameMode::ABomberMan_012025GameMode()
 void ABomberMan_012025GameMode::BeginPlay()
 {
     Super::BeginPlay();
-    //int valor2;
 
-    // Recorremos la matriz para generar los bloques
+    GenerarMapa();
+
+/*
     // Recorremos la matriz para generar los bloques
     for (int32 fila = 0; fila < aMapaBloques.Num(); ++fila)
     {
@@ -56,20 +57,20 @@ void ABomberMan_012025GameMode::BeginPlay()
           
 
 			//Se genera solo el 20% de los bloques
-            /*
+            
             if (columna == 0 || columna == 49 || fila == 0 || fila == 49) {
                
             }
             else if (FMath::RandRange(0, 10) < 2) {
                 valor2 = FMath::RandRange(1, 10);
                 SpawnBloque(posicionBloque, valor2);
-            }*/
+            }
             
         }
-    }
+    }*/
     
 
-
+    /*
     if (aposicionesLibresMadera.Num() > 0) {
         FVector posicionMasCercana;
         float distanciaMinima = FLT_MAX;
@@ -135,6 +136,7 @@ void ABomberMan_012025GameMode::BeginPlay()
             personaje->SetActorLocation(posicionMasCercana);
         }
     }
+    */
 
     AsignarMovimientosAleatorios();
 
@@ -144,7 +146,59 @@ void ABomberMan_012025GameMode::BeginPlay()
 }
 
 
-// Funcion para generar un bloque
+ void ABomberMan_012025GameMode::GenerarMapa()
+ {
+	 // Variables para definir tamano del mapa
+	 int32 limiteX = 30;
+	 int32 limiteY = 30;
+
+	 aMapaBloques.Empty(); // Limpiar el mapa antes de generarlo
+
+     // Inicializamos el tamano del mapa
+	 aMapaBloques.SetNum(limiteY); //Fila Y
+	 for (int32 fila = 0; fila < limiteY; ++fila)
+	 {
+		 aMapaBloques[fila].SetNum(limiteX); //Columna X
+
+         for (int32 columna = 0; columna < limiteX; ++columna)
+         {
+             //Si estamos en los bordes
+             if (fila == 0 || fila == limiteY - 1 || columna == 0 || columna == limiteX - 1)
+             {
+                 aMapaBloques[fila][columna] = 4; // borde
+             }
+             else
+             {
+                 int32 valorAleatorio;
+
+                 do
+                 {
+                     valorAleatorio = FMath::RandRange(0, 10);
+                 } while (valorAleatorio == 4);
+                 aMapaBloques[fila][columna] = valorAleatorio;
+             }
+         }
+	 }
+
+     //Generamos el mapa con bloques
+     for (int32 fila = 0; fila < aMapaBloques.Num(); ++fila)
+     {
+         for (int32 columna = 0; columna < aMapaBloques[fila].Num(); ++columna)
+         {
+			 int32 valor = aMapaBloques[fila][columna];
+			 // Calculamos la posicion del bloque
+			 FVector posicionBloque = FVector(
+				 XInicial + columna * AnchoBloque,
+				 YInicial + fila * LargoBloque,
+				 20.0f); // Z queda en 0 (altura del bloque)
+
+			 // Llamamos a la funcion para generar un bloque
+			 SpawnBloque(posicionBloque, valor);
+         }
+     }
+ }
+
+ // Funcion para generar un bloque
 void ABomberMan_012025GameMode::SpawnBloque(FVector posicionBloque, int32 tipoBloque)
 {
     ABloque* BloqueGenerado = nullptr;
